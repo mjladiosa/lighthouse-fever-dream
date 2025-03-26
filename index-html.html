@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lighthouse Keeper's Fever Dream</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Special+Elite&display=swap');
+        
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Special Elite', cursive;
+        }
+        
+        h1, h2, h3 {
+            font-family: 'Creepster', cursive;
+        }
+        
+        .glowing {
+            text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6;
+        }
+        
+        .lighthouse-container {
+            background-image: url('https://images.unsplash.com/photo-1566204773863-cf63e6d4ab4e');
+            background-size: cover;
+            background-position: center;
+        }
+        
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .flickering {
+            animation: flicker 2s infinite alternate;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        // Full Lighthouse Fever Dream game
+        const { useState, useEffect } = React;
+        const { Camera } = lucide.icons;
+        
+        const LighthouseFeverDream = () => {
+            // Game states
+            const [sanity, setSanity] = useState(100);
+            const [day, setDay] = useState(1);
+            const [currentEvent, setCurrentEvent] = useState(null);
+            const [inventory, setInventory] = useState([]);
+            const [gameOver, setGameOver] = useState(false);
+            const [endingType, setEndingType] = useState(null);
+            const [lighthouseState, setLighthouseState] = useState('normal');
+            const [weatherState, setWeatherState] = useState('clear');
+            const [showLog, setShowLog] = useState(false);
+            const [logEntries, setLogEntries] = useState([
+                { day: 0, text: "Dear Log, Today I begin my solitary post at this lighthouse. The mainland crew said I'll be relieved in 60 days. The isolation will be good for me, they said..." }
+            ]);
+
+            // Basic surreal events for the demo
+            const surrealistEvents = [
+                {
+                    id: 'melting_clock',
+                    title: 'Melting Clocks',
+                    description: 'The clock on the wall appears to be melting, dripping down like thick paint. Time seems to be flowing strangely.',
+                    options: [
+                        { text: 'Try to fix the clock', sanityChange: -5, giveItem: 'melted_time' },
+                        { text: 'Ignore it and focus on your duties', sanityChange: -10 },
+                        { text: 'Stare at it, mesmerized', sanityChange: -15, giveItem: 'time_distortion' }
+                    ]
+                },
+                {
+                    id: 'ghost_ship',
+                    title: 'Ghost Ship',
+                    description: 'Through the fog, you spot a ship with tattered sails glowing with an eerie blue light. It seems to be sailing... upside down?',
+                    options: [
+                        { text: 'Signal to the ship with your lighthouse beam', sanityChange: -10, giveItem: 'spectral_compass' },
+                        { text: 'Close your eyes and count to 100', sanityChange: -5 },
+                        { text: 'Wave enthusiastically', sanityChange: -15, giveItem: 'ghostly_barnacle' }
+                    ]
+                }
+            ];
+
+            // Weather states
+            const weatherStates = ['clear', 'foggy', 'stormy', 'bizarre'];
+            
+            // Lighthouse states
+            const lighthouseStates = ['normal', 'flickering', 'inverted', 'melting', 'multiplying'];
+
+            // Endings based on sanity and days
+            const endings = {
+                rescued: {
+                    title: "RESCUED!",
+                    description: "After 60 long days, the supply ship finally arrives. As you're taken back to the mainland, you can't help but feel that something followed you from the lighthouse..."
+                },
+                insanity: {
+                    title: "LOST TO THE VOID",
+                    description: "Your mind has completely unraveled. The rescue crew eventually found the lighthouse empty, with strange symbols covering every wall. You were never seen again."
+                },
+                transformation: {
+                    title: "BECOMING THE LIGHTHOUSE",
+                    description: "You've merged with the lighthouse itself. Your consciousness now extends with the beam of light, guiding lost souls through eternity. You are no longer human, but you're never alone."
+                },
+                underwater: {
+                    title: "BENEATH THE WAVES",
+                    description: "You discovered the lighthouse was actually underwater the entire time. As you step outside, your lungs fill with water, but strangely, you can breathe. The deep sea creatures welcome you to your new home."
+                }
+            };
+
+            // Initialize game
+            useEffect(() => {
+                // Random weather to start
+                setWeatherState(weatherStates[Math.floor(Math.random() * 2)]); // Start with either clear or foggy
+                
+                // Set up trigger for daily events
+                const gameTimer = setInterval(() => {
+                    if (!gameOver) {
+                        progressDay();
+                    }
+                }, 20000); // Day changes every 20 seconds
+                
+                return () => clearInterval(gameTimer);
+            }, [gameOver]);
+            
+            return (
+                <div className="bg-gray-900 text-white min-h-screen flex flex-col items-center">
+                    {/* Header */}
+                    <header className="w-full bg-blue-900 p-4 text-center">
+                        <h1 className="text-3xl font-bold glowing">Lighthouse Keeper's Fever Dream</h1>
+                        <p className="text-blue-200">Can you maintain your sanity for 60 days?</p>
+                    </header>
+                    
+                    {/* Game container */}
+                    <div className="container mx-auto p-4 max-w-4xl">
+                        {gameOver ? (
+                            /* Game over screen */
+                            <div className="bg-gray-800 p-6 rounded-lg shadow-lg text-center">
+                                <h2 className="text-4xl font-bold text-red-400 mb-6">{endings[endingType].title}</h2>
+                                <p className="text-xl mb-8">{endings[endingType].description}</p>
+                                <div className="mb-8">
+                                    <p>You survived {day} days</p>
+                                    <p>Final sanity: {sanity}</p>
+                                    <p>Items collected: {inventory.length}</p>
+                                </div>
+                                <button 
+                                    onClick={resetGame}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
+                                >
+                                    Experience The Madness Again
+                                </button>
+                            </div>
+                        ) : (
+                            /* Active game */
+                            <div className="flex flex-col md:flex-row gap-4">
+                                {/* Left side - Status */}
+                                <div className="md:w-1/3 bg-gray-800 p-4 rounded-lg">
+                                    <div className="mb-4">
+                                        <h2 className="text-xl font-bold border-b border-gray-600 pb-2 mb-2">Lighthouse Status</h2>
+                                        <p><span className="text-gray-400">Day:</span> {day}/60</p>
+                                        <p><span className="text-gray-400">Sanity:</span> {sanity}%</p>
+                                        <div className="w-full bg-gray-700 rounded-full h-2.5 mt-1">
+                                            <div 
+                                                className={`h-2.5 rounded-full ${
+                                                    sanity > 70 ? 'bg-green-600' : 
+                                                    sanity > 40 ? 'bg-yellow-500' : 
+                                                    sanity > 20 ? 'bg-orange-500' : 'bg-red-600'
+                                                }`}
+                                                style={{ width: `${sanity}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mb-4">
+                                        <h2 className="text-xl font-bold border-b border-gray-600 pb-2 mb-2">Weather</h2>
+                                        <p className={`
+                                            ${weatherState === 'clear' ? 'text-blue-300' : 
+                                            weatherState === 'foggy' ? 'text-gray-300' : 
+                                            weatherState === 'stormy' ? 'text-purple-300' : 'text-pink-300'}
+                                        `}>
+                                            {weatherState === 'clear' ? 'Clear skies and calm seas' : 
+                                            weatherState === 'foggy' ? 'Dense fog surrounds the lighthouse' : 
+                                            weatherState === 'stormy' ? 'Violent storm with massive waves' : 
+                                            'The sky and sea are behaving... strangely'}
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="mb-4">
+                                        <h2 className="text-xl font-bold border-b border-gray-600 pb-2 mb-2">Lighthouse Beam</h2>
+                                        <p className={`
+                                            ${lighthouseState === 'normal' ? 'text-yellow-300' : 
+                                            lighthouseState === 'flickering' ? 'text-yellow-500 flickering' : 
+                                            lighthouseState === 'inverted' ? 'text-blue-300' : 
+                                            lighthouseState === 'melting' ? 'text-orange-300' : 'text-green-300'}
+                                        `}>
+                                            {lighthouseState === 'normal' ? 'Functioning normally' : 
+                                            lighthouseState === 'flickering' ? 'Flickering erratically' : 
+                                            lighthouseState === 'inverted' ? 'Creating darkness instead of light' : 
+                                            lighthouseState === 'melting' ? 'Beam appears to be melting mid-air' : 
+                                            'Multiple beams shooting in different directions'}
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <h2 className="text-xl font-bold border-b border-gray-600 pb-2 mb-2">Inventory</h2>
+                                        {inventory.length === 0 ? (
+                                            <p className="text-gray-400 italic">Empty</p>
+                                        ) : (
+                                            <ul className="list-disc pl-5">
+                                                {inventory.map((item, index) => (
+                                                    <li key={index} className="text-sm mb-1">
+                                                        {item.replace(/_/g, ' ')}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => setShowLog(!showLog)}
+                                        className="mt-4 bg-gray-700 hover:bg-gray-600 text-white py-1 px-3 rounded-lg text-sm flex items-center"
+                                    >
+                                        <Camera className="w-4 h-4 mr-1" />
+                                        {showLog ? 'Hide Log' : 'View Keeper\'s Log'}
+                                    </button>
+                                </div>
+                                
+                                {/* Right side - Events and Interactions */}
+                                <div className="md:w-2/3">
+                                    {/* Event card */}
+                                    {currentEvent ? (
+                                        <div className="bg-gray-800 p-5 rounded-lg mb-4 border border-purple-900 shadow-lg shadow-purple-900/20">
+                                            <h2 className="text-2xl font-bold text-purple-300 mb-3">{currentEvent.title}</h2>
+                                            <p className="mb-6 text-lg">{currentEvent.description}</p>
+                                            
+                                            <div className="space-y-3">
+                                                <h3 className="font-semibold text-gray-300">How do you respond?</h3>
+                                                {currentEvent.options.map((option, index) => (
+                                                    <button
+                                                        key={index}
+                                                        onClick={() => handleChoice(option)}
+                                                        className="w-full text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-md flex justify-between items-center"
+                                                    >
+                                                        <span>{option.text}</span>
+                                                        <span className={`text-sm ${option.sanityChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                            {option.sanityChange >= 0 ? '+' : ''}{option.sanityChange} Sanity
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-gray-800 p-5 rounded-lg mb-4 lighthouse-container">
+                                            <div className="bg-black bg-opacity-70 p-4 rounded">
+                                                <h2 className="text-xl font-bold mb-2">The Lighthouse</h2>
+                                                <p>
+                                                    You stand in your solitary lighthouse, waves crashing against the rocks below. 
+                                                    The isolation is starting to weigh on you, and the line between reality and 
+                                                    hallucination grows thinner each day.
+                                                </p>
+                                                <p className="mt-2">
+                                                    Keep the light burning. Keep your mind intact. Just {60 - day} more days until relief arrives...
+                                                </p>
+                                                <p className="mt-6 text-sm text-gray-400 italic">
+                                                    Waiting for the next strange occurrence... 
+                                                    {day < 60 && "The longer you stay, the stranger things will get."}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Log entries */}
+                                    {showLog && (
+                                        <div className="bg-gray-800 p-4 rounded-lg mt-4 max-h-96 overflow-y-auto">
+                                            <h2 className="text-xl font-bold border-b border-gray-600 pb-2 mb-2">Lighthouse Keeper's Log</h2>
+                                            {logEntries.map((entry, index) => (
+                                                <div key={index} className="mb-3 pb-3 border-b border-gray-700">
+                                                    <div className="text-sm text-gray-400">Day {entry.day}</div>
+                                                    <div className="text-gray-200">{entry.text}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Footer */}
+                    <footer className="w-full bg-gray-800 p-2 text-center text-gray-400 text-sm mt-auto">
+                        <p>A surreal lighthouse experience created for a lighthouse lover's birthday</p>
+                    </footer>
+                </div>
+            );
+
+            // Progress day and trigger events
+            const progressDay = () => {
+                if (gameOver) return;
+                
+                // Increase day
+                const newDay = day + 1;
+                setDay(newDay);
+                
+                // Change weather randomly
+                const weatherChance = Math.random();
+                if (weatherChance < 0.3) {
+                    // As sanity decreases, bizarre weather becomes more likely
+                    const weatherOptions = sanity > 50 ? weatherStates.slice(0, 3) : weatherStates;
+                    setWeatherState(weatherOptions[Math.floor(Math.random() * weatherOptions.length)]);
+                }
+                
+                // Change lighthouse state based on sanity
+                if (sanity < 70 && Math.random() < 0.3) {
+                    // Lower sanity = more strange lighthouse states
+                    const maxLighthouseState = Math.max(1, Math.floor((100 - sanity) / 20));
+                    setLighthouseState(lighthouseStates[Math.floor(Math.random() * (maxLighthouseState + 1))]);
+                }
+                
+                // Add a log entry
+                addLogEntry(newDay);
+                
+                // Trigger random event
+                if (Math.random() < 0.7) { // 70% chance of event each day
+                    const randomEvent = surrealistEvents[Math.floor(Math.random() * surrealistEvents.length)];
+                    setCurrentEvent(randomEvent);
+                }
+                
+                // Check winning condition
+                if (newDay >= 60) {
+                    setGameOver(true);
+                    setEndingType('rescued');
+                }
+                
+                // Check losing condition
+                if (sanity <= 0) {
+                    setGameOver(true);
+                    // Pick a random bad ending
+                    const badEndings = ['insanity', 'transformation', 'underwater'];
+                    setEndingType(badEndings[Math.floor(Math.random() * badEndings.length)]);
+                }
+            };
+
+            // Handle player choice
+            const handleChoice = (option) => {
+                // Update sanity
+                const newSanity = Math.max(0, Math.min(100, sanity + option.sanityChange));
+                setSanity(newSanity);
+                
+                // Add item to inventory if given
+                if (option.giveItem) {
+                    setInventory([...inventory, option.giveItem]);
+                }
+                
+                // Add a log entry about the choice
+                setLogEntries([...logEntries, {
+                    day,
+                    text: `Made a choice: ${option.text}. ${option.sanityChange < 0 ? 'I feel my grip on reality slipping...' : 'I feel a bit more grounded now.'}`
+                }]);
+                
+                // Clear the event
+                setCurrentEvent(null);
+            };
+
+            // Add random log entries
+            const addLogEntry = (currentDay) => {
+                const randomEntries = [
+                    "The waves sound different today. Almost like they're speaking a language just beyond my comprehension.",
+                    "I found a strange object washed up on the rocks today. When I tried to pick it up, it disappeared.",
+                    "The lighthouse beam seems to be attracting unusual birds. Their eyes glow in the dark.",
+                    "I swear the stairs added three new steps overnight. The count is different every time.",
+                    "My reflection was slow to move this morning. Just by a fraction of a second, but I noticed.",
+                    "The supply cabinet contained items I don't remember storing. Who left these here?",
+                    "The walls seem to breathe when I'm not looking directly at them.",
+                    "I keep hearing a child's laughter from the lamp room when I'm downstairs.",
+                    "My logbook has entries in my handwriting that I don't remember writing.",
+                    "The lighthouse feels like it's getting taller. The view from the top is different now."
+                ];
+                
+                // Lower sanity = stranger log entries
+                const entryPool = sanity > 70 
+                    ? randomEntries.slice(0, 5) 
+                    : sanity > 40 
+                        ? randomEntries.slice(0, 8) 
+                        : randomEntries;
+                        
+                const newEntry = {
+                    day: currentDay,
+                    text: entryPool[Math.floor(Math.random() * entryPool.length)]
+                };
+                
+                setLogEntries([...logEntries, newEntry]);
+            };
+
+            // Reset the game
+            const resetGame = () => {
+                setSanity(100);
+                setDay(1);
+                setCurrentEvent(null);
+                setInventory([]);
+                setGameOver(false);
+                setEndingType(null);
+                setLighthouseState('normal');
+                setWeatherState('clear');
+                setLogEntries([
+                    { day: 0, text: "Dear Log, Today I begin my solitary post at this lighthouse. The mainland crew said I'll be relieved in 60 days. The isolation will be good for me, they said..." }
+                ]);
+            };
